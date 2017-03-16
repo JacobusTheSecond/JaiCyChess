@@ -61,6 +61,7 @@ board* advanceMoveOnCopy(board* b, short startx, short starty, short endx, short
 	memcpy(copy,b,sizeof(board));
 	copy->data[endx][endy] = copy->data[startx][starty];
 	copy->data[startx][starty] = 0x0;
+	return copy;
 }
 
 
@@ -110,130 +111,6 @@ int reachable(board* b, short startx, short starty, short endx, short endy, int 
 	}
 }
 
-
-//TODO testing
-/*returns 	0, if illegal move,
- *		1, if legal move
- *
- *undefined behaviour is expected, if entered board is already in illegal state
- * */
-int checkMove(board* b, short startx, short starty, short endx, short endy){
-	
-	//invalid input
-	if(!(0<=startx && 0<= starty && 0<=endx && 0<=endy && startx<8 && starty<8 && endx<8 && endy<8)){return 0;}
-
-	//wrong player
-	if(toMove(b) != getColorFromBoard(b,startx,starty)){return 0;}
-			
-	//check otherwise legal move for correct pattern
-	switch (getPieceFromBoard(b,startx,starty)){
-		case /*EMPTY*/	0x0:	return 0;
-
-		case /*PAWN*/	0x1:	if(getColorFromBoard(b,startx,starty)==WHITE){
-						//WHITE
-						
-						//move
-						if(getPieceFromBoard(b,startx,starty+1)==EMPTY){
-							if(walk(b,startx,starty+1,endx,endy,0)){
-								return 1;
-							}
-
-							//doublemove
-							if(starty == 1 && getPieceFromBoard(b,startx,starty+2)==EMPTY){
-								if (walk(b,startx,starty+2,endx,endy,WHITE)){
-									return 1;
-								}
-							}
-						}
-
-						//capture
-						if(walk(b,startx-1,starty+1,endx,endy,WHITE)){
-							return 1;
-						}
-						if(walk(b,startx+1,starty+1,endx,endy,WHITE)){
-							return 1;
-						}
-
-						//enpassant
-						if(b->enpassant.y!=0 && walk(b,startx+1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y+1)){
-							return 1;
-						}
-						if(b->enpassant.y!=0 && walk(b,startx-1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y+1)){
-							return 1;
-						}
-
-						return 0;
-
-					}else if(getPieceFromBoard(b,startx,starty)==BLACK){
-						//BLACK
-
-						//move
-						if(getPieceFromBoard(b,startx,starty-1)==EMPTY){
-							if(walk(b,startx,starty-1,endx,endy,0)){
-								return 1;
-							}
-
-							//doublemove
-							if(starty == 6 && getPieceFromBoard(b,startx,starty-2)==EMPTY){
-								if (walk(b,startx,starty-2,endx,endy,WHITE)){
-									return 1;
-								}
-							}
-						}
-
-						//capture
-						if(walk(b,startx+1,starty-1,endx,endy,WHITE)){
-							return 1;
-						}
-						if(walk(b,startx-1,starty-1,endx,endy,WHITE)){
-							return 1;
-						}
-
-						//enpassant
-						if(b->enpassant.y!=0 && walk(b,startx+1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y-1)){
-							return 1;
-						}
-						if(b->enpassant.y!=0 && walk(b,startx-1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y-1)){
-							return 1;
-						}
-
-						return 0;
-					}
-
-		case /*KNIGHT*/ 0x2:	if(reachable(b,startx,starty,endx,endy,patterns.Knight[0].x,patterns.Knight[0].y,patterns.Knight)
-						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
-						return 1;
-					}else{
-						return 0;
-					}
-		case /*BISHOP*/	0x3:	if(reachable(b,startx,starty,endx,endy,patterns.Bishop[0].x,patterns.Bishop[0].y,patterns.Bishop)
-						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
-						return 1;
-					}else{
-						return 0;
-					}
-		case /*ROOK*/	0x4:	if(reachable(b,startx,starty,endx,endy,patterns.Rook[0].x,patterns.Rook[0].y,patterns.Rook)
-						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
-						return 1;
-					}else{
-						return 0;
-					} 
-		case /*QUEEN*/	0x5:	if(reachable(b,startx,starty,endx,endy,patterns.Queen[0].x,patterns.Queen[0].y,patterns.Queen)
-						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
-						return 1;
-					}else{
-						return 0;
-					}
-		case /*KING*/	0x6:	if(reachable(b,startx,starty,endx,endy,patterns.King[0].x,patterns.King[0].y,patterns.King)
-						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
-						return 1;
-					}else{
-						return 0;
-					}
-	}
-	//TODO rochade
-}
-
 void printBoard(board* b){
 	printf("   A  B  C  D  E  F  G  H\n");
 	printf("   ______________________\n");
@@ -267,7 +144,7 @@ int recursiveCollide(board* b, int x, int y, tuple direction, char piece){
 	}
 
 	if(b->data[x+direction.x][y+direction.y]==EMPTY){
-		recursiveCollide(b,x+direction.x,y+direction.y,direction,piece);
+		return recursiveCollide(b,x+direction.x,y+direction.y,direction,piece);
 	}else{
 		return 0;
 	}
@@ -341,7 +218,7 @@ int checkCheck(board* b, int color, int freeAfter){
 	int colorprefix = 8*color;//only works if color = 1 or color = 0
 	for(int i=0;i<8;++i){
 		for(int j=0;j<8;++j){
-			if(b->data[i][j]==colorprefix|WKING){
+			if(b->data[i][j]==(colorprefix|WKING)){
 				Kingpos.x = i;
 				Kingpos.y = j;
 				break;
@@ -364,8 +241,191 @@ int checkCheck(board* b, int color, int freeAfter){
 	}
 }
 
+//TODO testing
+/*returns 	0, if illegal move,
+ *		1, if legal move
+ *
+ *undefined behaviour is expected, if entered board is already in illegal state
+ * */
+int checkMove(board* b, short startx, short starty, short endx, short endy){
+	
+	//invalid input
+	if(!(0<=startx && 0<= starty && 0<=endx && 0<=endy && startx<8 && starty<8 && endx<8 && endy<8)){return 0;}
+
+	//wrong player
+	if(toMove(b) != getColorFromBoard(b,startx,starty)){return 0;}
+			
+	//check otherwise legal move for correct pattern
+	switch (getPieceFromBoard(b,startx,starty)){
+		case /*EMPTY*/	0x0:	return 0;
+
+		case /*PAWN*/	0x1:	if(getColorFromBoard(b,startx,starty)==WHITE){
+						//WHITE
+						
+						//move
+						if(getPieceFromBoard(b,startx,starty+1)==EMPTY){
+							if(walk(b,startx,starty+1,endx,endy,0) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+								return 1;
+							}
+
+							//doublemove
+							if(starty == 1 && getPieceFromBoard(b,startx,starty+2)==EMPTY){
+								if (walk(b,startx,starty+2,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+									return 1;
+								}
+							}
+						}
+
+						//capture
+						if(walk(b,startx-1,starty+1,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+							return 1;
+						}
+						if(walk(b,startx+1,starty+1,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+							return 1;
+						}
+
+						//enpassant
+						if(b->enpassant.y!=0 && walk(b,startx+1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y+1)){
+							board* enpassantcopy = advanceMoveOnCopy(b,startx,starty,endx,endy);
+							enpassantcopy->data[b->enpassant.x][b->enpassant.y] = 0;
+							if(!checkCheck(enpassantcopy,WHITE,1)){
+								return 1;
+							}
+						}
+						if(b->enpassant.y!=0 && walk(b,startx-1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y+1)){
+							board* enpassantcopy = advanceMoveOnCopy(b,startx,starty,endx,endy);
+							enpassantcopy->data[b->enpassant.x][b->enpassant.y] = 0;
+							if(!checkCheck(enpassantcopy,WHITE,1)){
+								return 1;
+							}
+						}
+
+						return 0;
+
+					}else if(getColorFromBoard(b,startx,starty)==BLACK){
+						//BLACK
+
+						//move
+						if(getPieceFromBoard(b,startx,starty-1)==EMPTY){
+							if(walk(b,startx,starty-1,endx,endy,0) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+								return 1;
+							}
+
+							//doublemove
+							if(starty == 6 && getPieceFromBoard(b,startx,starty-2)==EMPTY){
+								if (walk(b,startx,starty-2,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+									return 1;
+								}
+							}
+						}
+
+						//capture
+						if(walk(b,startx+1,starty-1,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+							return 1;
+						}
+						if(walk(b,startx-1,starty-1,endx,endy,WHITE) && !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),WHITE,1)){
+							return 1;
+						}
+
+						//enpassant
+						if(b->enpassant.y!=0 && walk(b,startx+1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y-1)){
+							board* enpassantcopy = advanceMoveOnCopy(b,startx,starty,endx,endy);
+							enpassantcopy->data[b->enpassant.x][b->enpassant.y] = 0;
+							if(!checkCheck(enpassantcopy,WHITE,1)){
+								return 1;
+							}
+						}
+						if(b->enpassant.y!=0 && walk(b,startx-1,starty,b->enpassant.x,b->enpassant.y,WHITE) && (endx==b->enpassant.x) && (endy==b->enpassant.y-1)){
+							board* enpassantcopy = advanceMoveOnCopy(b,startx,starty,endx,endy);
+							enpassantcopy->data[b->enpassant.x][b->enpassant.y] = 0;
+							if(!checkCheck(enpassantcopy,WHITE,1)){
+								return 1;
+							}
+						}
+
+						return 0;
+					}
+
+		case /*KNIGHT*/ 0x2:	if(reachable(b,startx,starty,endx,endy,patterns.Knight[0].x,patterns.Knight[0].y,patterns.Knight)
+						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
+						return 1;
+					}else{
+						return 0;
+					}
+		case /*BISHOP*/	0x3:	if(reachable(b,startx,starty,endx,endy,patterns.Bishop[0].x,patterns.Bishop[0].y,patterns.Bishop)
+						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
+						return 1;
+					}else{
+						return 0;
+					}
+		case /*ROOK*/	0x4:	if(reachable(b,startx,starty,endx,endy,patterns.Rook[0].x,patterns.Rook[0].y,patterns.Rook)
+						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
+						return 1;
+					}else{
+						return 0;
+					} 
+		case /*QUEEN*/	0x5:	if(reachable(b,startx,starty,endx,endy,patterns.Queen[0].x,patterns.Queen[0].y,patterns.Queen)
+						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
+						return 1;
+					}else{
+						return 0;
+					}
+		case /*KING*/	0x6:	if(reachable(b,startx,starty,endx,endy,patterns.King[0].x,patterns.King[0].y,patterns.King)
+						&& !checkCheck(advanceMoveOnCopy(b,startx,starty,endx,endy),getColorFromBoard(b,startx,starty),1)){
+						return 1;
+					}
+					//weiß rochade
+					//kurz
+					if(b->otherData&0x1>0){
+						if(endx == 6 && endy == 0 &&  b->data[5][0]==EMPTY && b->data[6][0]==EMPTY){
+							if((!isAttacked(b,4,0,BLACK)) && (!isAttacked(b,5,0,BLACK)) && (!isAttacked(b,6,0,BLACK))){
+								return 1;
+							}
+						}
+					}
+					//lang
+					if(b->otherData&0x2>0){
+						if(endx==2 && endy == 0 && b->data[1][0] == EMPTY && b->data[2][0]==EMPTY && b->data[3][0]==EMPTY){
+							if(!isAttacked(b,2,0,BLACK) && !isAttacked(b,3,0,BLACK) && !isAttacked(b,4,0,BLACK)){
+								return 1;
+							}
+						}
+					}
+
+					//schwarz rochade
+					//kurz
+					if(b->otherData&0x4>0){
+						if(endx == 6 && endy == 7 &&  b->data[5][7]==EMPTY && b->data[6][7]==EMPTY){
+							if(!isAttacked(b,4,7,WHITE) && !isAttacked(b,5,7,WHITE) && !isAttacked(b,6,7,WHITE)){
+								return 1;
+							}
+						}
+					}
+					//lang
+					if(b->otherData&0x8>0){
+						if(endx==2 && endy == 7 && b->data[1][7] == EMPTY && b->data[2][7]==EMPTY && b->data[3][7]==EMPTY){
+							if(!isAttacked(b,2,7,WHITE) && !isAttacked(b,3,7,WHITE) && !isAttacked(b,4,7,WHITE)){
+								return 1;
+							}
+						}
+					}
+					return 0;
+	}
+}
+
 void main(){
-	board* b = FENtoBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - ");
+	printf("0 = voreingestelltes FEN, 1 = eigenes FEN\n");
+	char c;
+	scanf("%c",&c);
+	board* b;
+	if(c == '0'){
+		b = FENtoBoard("rnbqkbnr/pppppppp/8/8/3b4/8/PPPPPPPP/RNBQK2R w KQkq - ");
+	}else{
+		printf("FEN eingeben:\n");
+		char* FEN = malloc(256*sizeof(char));
+		scanf(" %s",FEN);
+		b = FENtoBoard(FEN);
+	}
 	/*board* b = calloc(1,sizeof(board));
 	b->data[0][0]=(char)WBISHOP;
 	b->data[1][1]=(char)WPAWN;
@@ -380,9 +440,13 @@ void main(){
 	printf("b2xc3: %d\n",checkMove(b,1,1,2,2));
 	printf("a1xc3: %d\n",checkMove(b,0,0,2,2));
 	printf("b5xa4: %d\n",checkMove(b,1,4,0,3));*/
-	printf("enter move\n");
 	int sx,sy,ex,ey;
-	scanf("%d %d %d %d",&sx,&sy,&ex,&ey);
-	printf("%d\n",checkMove(b,sx,sy,ex,ey));
-	printf("%d\n",isAttacked(b,4,2,WHITE));
+	while(c!='q'){
+		printf("enter move:\n");
+		scanf("%d %d %d %d",&sx,&sy,&ex,&ey);
+		printf("move Legal:%d\n",checkMove(b,sx,sy,ex,ey));
+		printf("Quit? q=Yes, n=No\n");
+		getchar();
+		scanf("%c",&c);
+	}
 }
