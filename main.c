@@ -23,13 +23,17 @@ typedef struct pattern{
 	tuple Rook[5];
 	tuple Bishop[5];
 	tuple Knight[9];
+	tuple attackWPawn[3];
+	tuple attackBPawn[3];
 } pattern;
 
 pattern patterns = {	/*King*/	{/*rec,size*/{0,9}, {1,1},{1,0},{1,-1},{0,1},{0,-1},{-1,1},{-1,0},{-1,-1}},
 			/*Queen*/	{/*rec,size*/{1,9}, {1,1},{1,0},{1,-1},{0,1},{0,-1},{-1,1},{-1,0},{-1,-1}},
 			/*Rook*/	{/*rec,size*/{1,5}, {1,0},{0,1},{0,-1},{-1,0}},
 			/*Bishop*/	{/*rec,size*/{1,5}, {1,1},{1,-1},{-1,1},{-1,-1}},
-			/*Knight*/	{/*rec,size*/{0,9}, {2,1},{2,-1},{1,2},{1,-2},{-1,2},{-1,-2},{-2,1},{-2,-1}}
+			/*Knight*/	{/*rec,size*/{0,9}, {2,1},{2,-1},{1,2},{1,-2},{-1,2},{-1,-2},{-2,1},{-2,-1}},
+			/*WPawn*/	{/*rec,size*/{0,3}, {-1,-1},{-1,1}},
+			/*BPawn*/	{/*rec,size*/{0,3}, {1,-1},{1,1}}
 };
 
 int toMove(board* b){
@@ -59,14 +63,7 @@ board* advanceMoveOnCopy(board* b, short startx, short starty, short endx, short
 	copy->data[startx][starty] = 0x0;
 }
 
-int checkCheck(board* b, int color, int freeAfter){
-	//TODO check Check
-	if(freeAfter){
-		free(b);
-	}
-	//TODO return proper
-	return 0;
-}
+
 
 int recursiveWalk(board* b, short startx, short starty, short endx, short endy, int color, tuple direction){
 	if(!(startx<8 && 0<=startx && starty<8 && starty >= 0)){
@@ -251,12 +248,120 @@ void printBoard(board* b){
 	printf("00/000: ws:%d wl:%d bs:%d bl:%d\n",b->otherData&0x1>0,b->otherData&0x2>0,b->otherData&0x4>0,b->otherData&0x8>0);
 }
 
-int isAttacked(board* b, short x, short y){
+/*checks wether or not on a certain field a certain piece is positioned
+ * */
+int collide(board* b, int x, int y, tuple direction, char piece){
+	return( (x+direction.x<8 && x+direction.x>=0) && (y+direction.y<8 && y+direction.y>=0)
+		&& (b->data[x+direction.x][y+direction.y] == piece));
+}
+
+/*checks wether or not in a certain direction a certain piece is positioned
+ * */
+int recursiveCollide(board* b, int x, int y, tuple direction, char piece){
+	if(!(x+direction.x<8 && x+direction.x>=0 && y+direction.y<8 && y+direction.y>=0)){
+		return 0;
+	}
+
+	if(b->data[x+direction.x][y+direction.y]==piece){
+		return 1;
+	}
+
+	if(b->data[x+direction.x][y+direction.y]==EMPTY){
+		recursiveCollide(b,x+direction.x,y+direction.y,direction,piece);
+	}else{
+		return 0;
+	}
+}
+
+/*checks if a square is attacked by any piece of a certain color
+ * possible values for color: 0x1(black), 0x0(white)
+ *
+ * */
+int isAttacked(board* b, short x, short y,char color){
+	if(color != 0 && color != 1){
+		return 0;
+	}
+	char colorprefix = color?0x8:0x0;
 	/*PAWNS*/
-	/*TODO*/
 
+	/*Pawn movement isnt self-invers, so i had to improvise Kappa*/
+	/*attacked by black pawn*/
+	if(color){
+		for(int i=1;i<patterns.attackWPawn[0].y;++i){
+			if(collide(b,x,y,patterns.attackWPawn[i],BPAWN)){
+				return 1;
+			}
+		}
+	}else{
+	/*attacked by white pawn*/
+		for(int i=1;i<patterns.attackBPawn[0].y;++i){
+			if(collide(b,x,y,patterns.attackBPawn[i],WPAWN)){
+				return 1;
+			}
+		}
+	}
 	/*KNIGHTS*/
+	for(int i=1;i<patterns.Knight[0].y;++i){
+		if(collide(b,x,y,patterns.Knight[i],colorprefix|WKNIGHT)){
+			return 1;
+		}
+	}
 
+	/*BISHOP*/
+	for(int i=1;i<patterns.Bishop[0].y;++i){
+		if(recursiveCollide(b,x,y,patterns.Bishop[i],colorprefix|WBISHOP)){
+			return 1;
+		}
+	}
+	/*ROOK*/
+	for(int i=1;i<patterns.Rook[0].y;++i){
+		if(recursiveCollide(b,x,y,patterns.Rook[i],colorprefix|WROOK)){
+			return 1;
+		}
+	}
+	/*QUEEN*/
+	for(int i=1;i<patterns.Queen[0].y;++i){
+		if(recursiveCollide(b,x,y,patterns.Queen[i],colorprefix|WQUEEN)){
+			return 1;
+		}
+	}
+	/*KING*/
+	for(int i=1;i<patterns.King[0].y;++i){
+		if(collide(b,x,y,patterns.King[i],colorprefix|WKING)){
+			return 1;
+		}
+	}
+	return 0;
+
+}
+
+int checkCheck(board* b, int color, int freeAfter){
+	//find King
+	tuple Kingpos = {-1,-1};
+	int colorprefix = 8*color;//only works if color = 1 or color = 0
+	for(int i=0;i<8;++i){
+		for(int j=0;j<8;++j){
+			if(b->data[i][j]==colorprefix|WKING){
+				Kingpos.x = i;
+				Kingpos.y = j;
+				break;
+			}
+		}
+		if(Kingpos.x != -1){
+			break;
+		}
+	}
+	if(Kingpos.x == -1){
+		if(freeAfter){free(b);}
+		return 0;
+	}
+	if(isAttacked(b,Kingpos.x,Kingpos.y,1-color)){
+		if(freeAfter){free(b);}
+		return 1;	
+	}else{
+		if(freeAfter){free(b);}
+		return 0;
+	}
 }
 
 void main(){
@@ -269,7 +374,6 @@ void main(){
 	b->data[0][4]=(char)WPAWN;
 	b->enpassant.x = 1;
 	b->enpassant.y = 4;*/
-	printf("reached\n");
 	printBoard(b);
 	/*printf("a5xb6: %d\n",checkMove(b,0,4,1,5));
 	printf("a5a6:  %d\n",checkMove(b,0,4,0,5));
@@ -280,4 +384,5 @@ void main(){
 	int sx,sy,ex,ey;
 	scanf("%d %d %d %d",&sx,&sy,&ex,&ey);
 	printf("%d\n",checkMove(b,sx,sy,ex,ey));
+	printf("%d\n",isAttacked(b,4,2,WHITE));
 }
